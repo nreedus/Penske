@@ -1,0 +1,170 @@
+---
+title: "Penske - Sentiment Analysis"
+author: "Analyst - Narcel Reedus"
+date: "Date - November 2, 2017"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, FALSE, include=FALSE, message = FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# <span style="color:#0062c6">*Summary*</span>
+## The objective of this project is to generate a sentiment analysis using a corpus of four negative online reviews of Penske Truck Rental. The analysis will assist in revealing and isolating any apparent systemic lapse in service standards within the process of leasing Penske trucks. ![](C:\Users\narce\OneDrive\Documents\GitHub\Penske\Penske\Penske_5.png) I copied and pasted four online reviews from the website [Ripoff Report](http://www.ripoffreport.com/reports/search/advanced?cat_id=237&title=%22Penske%22&e_city=&e_state=&e_country=USA) and created separate .txt documents for each review. 
+
+## The analysis uses the [Minqing Hu and Bing Liu](http://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html) Positive and Negative Opinion Lexicons from their paper: Minqing Hu and Bing Liu. "Mining and Summarizing Customer Reviews." Proceedings of the ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (KDD-2004), Aug 22-25, 2004, Seattle, Washington, USA,
+
+## The analysis also generates postive and negative sentiment scores for each document. The documents originate from a complaint website, therefore, high negative scores are natually expected. The key take away here is the ability to identify the frequency of outlier negative sentiments that may appear across the corpus. 
+
+
+# <span style="color:#0062c6">*Process*</span>
+### Load packages
+
+```{r results='hide', warning=FALSE, message=FALSE, class.source='bg-warning', class.output='bg-warning'} 
+library(tm)
+library(wordcloud)
+library(stringr)
+library(kableExtra)
+library(httr)
+```
+
+### Assign corpus of Penske reviews to a folder in the working direcory
+```{r class.source='bg-warning', class.output='bg-warning', class.source='bg-warning', class.output='bg-warning'}
+folder <- "C:/Users/narce/OneDrive/Documents/GitHub/Penske/Penske/corpus"
+```
+### Confirm the contents of the folder
+```{r class.source='bg-warning', class.output='bg-warning'}
+list.files(path=folder, pattern="*.txt")
+```
+
+### Create character vector of the four file names
+```{r class.source='bg-warning', class.output='bg-warning'}
+filelist <- list.files(path=folder, pattern="*.txt")
+filelist
+str(filelist)
+```
+### Create a separate file path for each element and saves that into a new value, filelist
+```{r class.source='bg-warning', class.output='bg-warning'}
+filelist <-paste(folder, "\\", filelist, sep="")
+```
+```{r class.source = 'bg-success', class.output = 'bg-success'}
+filelist
+```
+
+### Import each file as a character vector using laaply and the read.Lines function. ReadLines will treat each line of text as a separate element in a character vector. Laaply applies this to each file in the folder.
+
+```{r warning=FALSE, class.source='bg-warning', class.output='bg-warning'}
+library(knitr)
+kable(lapply(filelist, FUN=readLines), "html", caption = "**Online Reviews**") %>%
+  kable_styling() %>%
+  scroll_box(width = "915px", height = "200px")
+```
+### Assign a new vector to filelistA
+```{r warning=FALSE, results='hide', class.source='bg-warning', class.output='bg-warning'}
+filelistA <- lapply(filelist, FUN=readLines)
+```
+```{r results='hide', class.source='bg-warning', class.output='bg-warning'}
+lapply(filelistA, FUN = paste, collapse=" ")
+```
+
+```{r class.source='bg-warning', class.output='bg-warning'}
+corpus <-lapply(filelistA, FUN = paste, collapse=" ")
+```
+#<span style="color:#0062c6">*Munging the Data*</span>
+### Removes punctuations
+```{r class.source='bg-warning', class.output='bg-warning'}
+corpus2 <- gsub(pattern = "\\W", replace=" ", corpus)
+```
+### Removes numbers
+```{r class.source='bg-warning', class.output='bg-warning'}
+corpus2 <- gsub(pattern = "\\d", replacement = " ", corpus2)
+```
+### Makes text lowercase
+```{r class.source='bg-warning', class.output='bg-warning'}
+corpus2<-tolower(corpus2)
+```
+### Removes stopwords (and, the, a...)
+```{r class.source='bg-warning', class.output='bg-warning'}
+corpus2 <- removeWords(corpus2, stopwords("english"))
+```
+### Removes single character text
+```{r class.source='bg-warning', class.output='bg-warning'}
+corpus2 < gsub(pattern = "\\b[A-z]\\b{1}", replace=" ", corpus2)
+```
+### Removes white space
+```{r class.source='bg-warning', class.output='bg-warning'}
+corpus2 <- stripWhitespace(corpus2)
+```
+### Creates a wordcloud visualization of the most used words in the corpus 
+```{r class.source='bg-warning', class.output='bg-warning'}
+wordcloud(corpus2, random.order = FALSE, colors = rainbow(3))
+```
+
+### Creates a corpus
+```{r class.source='bg-warning', class.output='bg-warning'}
+corpus3 <- Corpus(VectorSource(corpus2))
+```
+```{r class.source = 'bg-success', class.output = 'bg-success'}
+summary(corpus3)
+```
+### Creates a Term document matrix
+```{r class.source='bg-warning', class.output='bg-warning'}
+tdm <- TermDocumentMatrix(corpus3)
+```
+### Creates the matrix
+```{r results='hide', class.source='bg-warning', class.output='bg-warning'}
+as.matrix(tdm)
+viewmatrix <- as.matrix(tdm)
+```
+
+### Changes the names of the columns (Read1 = Reading, PA, Malb = Malborough, MA, Read2 - Reading, PA, Baker = Bakersfield, CA)
+```{r class.source = 'bg-success', class.output = 'bg-success'}
+colnames(viewmatrix) <- c("Read1", "Malb", "Read2", "Baker")
+```
+```{r class.source = 'bg-success', class.output = 'bg-success'}
+  kable(as.matrix(tdm), "html") %>%
+  kable_styling() %>%
+  scroll_box(width = "915px", height = "200px")
+
+viewmatrix <- as.matrix(tdm)
+```
+### Creates a comparision wordcloud the illustrates the most used term in each of the four documents. Insight & Analysis - "home depot" stands out in Malb, "truck" and "police" are significant in Read1, "damages" "insurance" and "roadway" in Read2, while "husband", "two" and "vehicle" are the prominent terms in Baker.
+```{r warning=FALSE, class.source = 'bg-success', class.output = 'bg-success'}
+comparison.cloud(viewmatrix)
+```
+#<span style="color:#0062c6">*Opinion Lexicons*</span> 
+### Import opinion lexicons
+
+```{r class.source = 'bg-success', class.output = 'bg-success'}
+opinion.lexicon.pos <- scan("positive-words.txt", what="character", comment.char = ";")
+
+opinion.lexicon.neg <- scan("negative-words.txt", what="character", comment.char = ";")
+```
+#<span style="color:#0062c6">*Bag of Words*</span>
+### Creates a bag of words for each document in the corpus.
+```{r class.source = 'bg-success', class.output = 'bg-success'}
+kable(corpus4 <- str_split(corpus2, pattern="\\s+"), "html", caption = "**Bag of Words**") %>%
+  kable_styling() %>%
+  scroll_box(width = "915px", height = "200px")
+```
+### Matches the bag of words to the positive lexicon of words. Doc1 = 3, Doc2 = 10, Doc3 = 5, Doc4 = 4. 
+```{r class.source = 'bg-success', class.output = 'bg-success'}
+lapply(corpus4, function(x) { sum(!is.na(match(x, opinion.lexicon.pos)))})
+```
+### Matches the bag of words to the negative lexicon of words. Doc1 = 10, Doc2 = 7, Doc3 = 12, Doc4 = 14 
+```{r class.source = 'bg-success', class.output = 'bg-success'}
+lapply(corpus4, function(x) { sum(!is.na(match(x, opinion.lexicon.neg)))})
+```
+### Calculates the sum totals of Positive sentiments vs negative sentiments in the corpus. Doc1 = -7, Doc2 = 3, Doc3 = -7, Doc4 = -10. 
+```{r class.source = 'bg-success', class.output = 'bg-success'}
+lapply(corpus4, function(x) { sum(!is.na(match(x, opinion.lexicon.pos))) - sum(!is.na(match(x, opinion.lexicon.neg)))})
+```
+#<span style="color:#0062c6">*Sentiment Scores*</span>
+### Displays sentiment scores for each document in the corpus
+```{r class.source = 'bg-success', class.output = 'bg-success'}
+scores <-unlist(lapply(corpus4, function(x) { sum(!is.na(match(x, opinion.lexicon.pos))) - sum(!is.na(match(x, opinion.lexicon.neg)))}))
+```
+
+### 
